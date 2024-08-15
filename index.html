@@ -261,7 +261,7 @@ function moveDown()
     return withMoveLock(trackMoveDown, DOWN)
 end
 
-function moveTo(toX, toY, toZ)
+function moveToY(toY)
     while Y ~= toY do
         if Y > toY then
             if not moveUp() then
@@ -273,7 +273,9 @@ function moveTo(toX, toY, toZ)
             end
         end
     end
+end
 
+function moveToXZ(toX, toZ)
     setFacing(facingFromDiff(toX - X, 0, 0))
 
     while X ~= toX do
@@ -291,6 +293,11 @@ function moveTo(toX, toY, toZ)
     end
 end
 
+function moveTo(toX, toY, toZ)
+    moveToY(toY)
+    moveToXZ(toX, toZ)
+end
+
 function setReturn()
     RETURN_X = X
     RETURN_Y = Y
@@ -299,7 +306,8 @@ function setReturn()
 end
 
 function moveToReturn()
-    moveTo(RETURN_X, RETURN_Y, RETURN_Z)
+    moveToXZ(RETURN_X, RETURN_Z)
+    moveToY(RETURN_Y)
     RETURN_X = ''
     RETURN_Y = ''
     RETURN_Z = ''
@@ -324,7 +332,8 @@ function unload()
     UNLOADING = true
     saveState()
 
-    moveTo(0, -1, 0)
+    moveToY(-1)
+    moveToXZ(0, 0)
     for i=1, 16 do
         turtle.select(i)
         turtle.dropUp()
@@ -377,12 +386,15 @@ if RETURNING then
 end
 
 function digMove()
+    untilFailure(turtle.suckUp)
+    untilFailure(turtle.suckDown)
+    untilFailure(turtle.suck)
     turtle.digUp()
-    turtle.suckUp()
+    untilFailure(turtle.suckUp)
     turtle.digDown()
-    turtle.suckDown()
+    untilFailure(turtle.suckDown)
     turtle.dig()
-    turtle.suck()
+    untilFailure(turtle.suck)
     moveForward()
 end
 
