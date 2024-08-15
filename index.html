@@ -42,6 +42,15 @@ function untilSuccess(f, ...)
     return res
 end
 
+function untilFailure(f, ...)
+    repeat
+        local res = f(table.unpack(args))
+    until
+        res ~= true
+
+    return res
+end
+
 function inverseFacing(facing)
     return (facing+2)%4
 end
@@ -367,6 +376,16 @@ if RETURNING then
     moveToReturn()
 end
 
+function digMove()
+    turtle.digUp()
+    turtle.suckUp()
+    turtle.digDown()
+    turtle.suckDown()
+    turtle.dig()
+    turtle.suck()
+    moveForward()
+end
+
 function mainLoop()
     if turtle.getFuelLevel() < REFUEL_THRESHOLD then
         refuel()
@@ -408,13 +427,7 @@ function mainLoop()
             setFacing(WEST)
         end
 
-        turtle.digUp()
-        turtle.suckUp()
-        turtle.digDown()
-        turtle.suckDown()
-        turtle.dig()
-        turtle.suck()
-        moveForward()
+        digMove()
         return
     end
 
@@ -424,13 +437,7 @@ function mainLoop()
         setFacing(SOUTH)
     end
 
-    turtle.digUp()
-    turtle.suckUp()
-    turtle.digDown()
-    turtle.suckDown()
-    turtle.dig()
-    turtle.suck()
-    moveForward()
+    digMove()
 
     if (X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y > DEPTH or Y < -1) then
         print('OUT OF BOUNDS')
