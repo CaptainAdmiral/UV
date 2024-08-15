@@ -254,12 +254,11 @@ end
 
 function moveTo(toX, toY, toZ)
     while Y ~= toY do
-        if Y < toY then
+        if Y > toY then
             moveUp()
         else
             moveDown()
         end
-        return
     end
 
     setFacing(facingFromDiff(toX - X, 0, 0))
