@@ -393,9 +393,9 @@ function mainLoop()
 
     if isMaxZ then
         if Y%2 then
-            setFacing(EAST)
-        else
             setFacing(WEST)
+        else
+            setFacing(EAST)
         end
 
         turtle.digUp()
