@@ -396,7 +396,7 @@ function mainLoop()
     end
 
     if isMaxZ then
-        if facingBit == 0 then
+        if Y%2 == 0 then
             setFacing(EAST)
         else
             setFacing(WEST)
