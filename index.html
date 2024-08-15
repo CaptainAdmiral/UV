@@ -106,7 +106,8 @@ end
 function loadState()
     if ATTEMPTING_TURN then
         print('ATTEMPTING TURN on load')
-        x=1/0
+        FINISHED=true
+        saveState()
     end
 
     local file = nil
@@ -145,7 +146,8 @@ function loadState()
         local diff = FUEL - turtle.getFuelLevel()
         if diff < 0 then
             print('OVERFUEL on load')
-            x=1/0
+            FINISHED=true
+            saveState()
         end
         updatePosFromFacing(ATTEMPTED_MOVE, diff)
         ATTEMPTING_MOVE = false
@@ -339,7 +341,7 @@ function setFacing(facing)
         return
     end
 
-    if (FACING+1)%4 == FACING then
+    if (facing+1)%4 == FACING then
         turnRight()
     else
         turnLeft()
@@ -410,9 +412,9 @@ function mainLoop()
     end
 
     if facingBit then
-        setFacing(NORTH)
-    else
         setFacing(SOUTH)
+    else
+        setFacing(NORTH)
     end
 
     turtle.digUp()
@@ -423,9 +425,10 @@ function mainLoop()
     turtle.suck()
     moveForward()
 
-    if X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y > DEPTH or Y < -1 then
+    if (X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y > DEPTH or Y < -1) then
         print('OUT OF BOUNDS')
-        x=1/0
+        FINISHED=true
+        saveState()
     end
 end
 
