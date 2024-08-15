@@ -12,20 +12,20 @@ WEST = 3
 UP = 4
 DOWN = 5
 
-X = nil
-Y = nil
-Z = nil
-FACING = nil
-FUEL = nil
+X = ''
+Y = ''
+Z = ''
+FACING = ''
+FUEL = ''
 ATTEMPTING_MOVE = false
 ATTEMPTING_TURN = false
-ATTEMPTED_MOVE = nil
+ATTEMPTED_MOVE = ''
 
 UNLOADING = false
 RETURNING = false
-RETURN_X = nil
-RETURN_Y = nil
-RETURN_Z = nil
+RETURN_X = ''
+RETURN_Y = ''
+RETURN_Z = ''
 
 FINISHED = false
 
@@ -147,7 +147,7 @@ function loadState()
         end
         updatePosFromFacing(ATTEMPTED_MOVE, diff)
         ATTEMPTING_MOVE = false
-        ATTEMPTED_MOVE = nil
+        ATTEMPTED_MOVE = ''
         saveState()
     end
 end
@@ -191,7 +191,7 @@ function withMoveLock(f, attemptedMove)
     saveState()
     local res = f()
     ATTEMPTING_MOVE = false
-    ATTEMPTED_MOVE = nil
+    ATTEMPTED_MOVE = ''
     saveState()
     return res
 end
@@ -280,9 +280,9 @@ end
 
 function moveToReturn()
     moveTo(RETURN_X, RETURN_Y, RETURN_Z)
-    RETURN_X = nil
-    RETURN_Y = nil
-    RETURN_Z = nil
+    RETURN_X = ''
+    RETURN_Y = ''
+    RETURN_Z = ''
     RETURNING = false
     saveState()
 end
