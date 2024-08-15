@@ -374,9 +374,9 @@ while not FINISHED do
         return
     end
 
-    local facingBit = bit.bxor(Z%2, Y%2)
-    local isMaxX = X == X_SIZE - X_SIZE*facingBit
-    local isMaxZ = Z == Z_SIZE - Z_SIZE*(Y%2)
+    local facingBit = bit.bxor(X%2, Y%2)
+    local isMaxZ = Z == Z_SIZE - Z_SIZE*facingBit
+    local isMaxX = X == X_SIZE - X_SIZE*(Y%2)
 
     if isMaxX and isMaxZ then
         if Y >= DEPTH + 1 then
