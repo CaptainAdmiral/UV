@@ -1,6 +1,7 @@
+DEPTH = 70
+
 REFUEL_THRESHOLD = 500
 REFUEL_TO = 800
-MIN_Y = 6
 X_SIZE = 16
 Z_SIZE = 16
 
@@ -55,9 +56,9 @@ function facingFromDiff(dx, dy, dz)
     elseif dx < 0 then
         return WEST
     elseif dy > 0 then
-        return UP
-    elseif dy < 0 then
         return DOWN
+    elseif dy < 0 then
+        return UP
     end
 
     return FACING
@@ -73,9 +74,9 @@ function updatePosFromFacing(facing, amount)
     elseif facing == WEST then
         X = X - amount
     elseif facing == UP then
-        Y = Y + amount
-    elseif facing == DOWN then
         Y = Y - amount
+    elseif facing == DOWN then
+        Y = Y + amount
     end
 end
 
@@ -378,7 +379,7 @@ while not FINISHED do
     local isMaxZ = Z == Z_SIZE - Z_SIZE*(Y%2)
 
     if isMaxX and isMaxZ then
-        if Y <= MIN_Y + 1 then
+        if Y >= DEPTH + 1 then
             FINISHED = true
             return
         end
