@@ -343,7 +343,10 @@ function unload()
     UNLOADING = false
     RETURNING = true
     saveState()
-    moveToReturn()
+
+    if not FINISHED then
+        moveToReturn()
+    end
 end
 
 function fullInv()
@@ -456,8 +459,16 @@ function mainLoop()
 
     digMove()
 
-    if (X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y > DEPTH or Y < -1) then
+    if (X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y < -1) then
         print('OUT OF BOUNDS')
+        FINISHED=true
+        saveState()
+        return
+    end
+
+    if Y > DEPTH then
+        setReturn()
+        unload()
         FINISHED=true
         saveState()
     end
