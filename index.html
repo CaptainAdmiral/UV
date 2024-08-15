@@ -395,10 +395,10 @@ function mainLoop()
     end
 
     if isMaxZ then
-        if facingBit then
-            setFacing(WEST)
-        else
+        if facingBit == 0 then
             setFacing(EAST)
+        else
+            setFacing(WEST)
         end
 
         turtle.digUp()
@@ -411,10 +411,10 @@ function mainLoop()
         return
     end
 
-    if facingBit then
-        setFacing(SOUTH)
-    else
+    if facingBit == 0 then
         setFacing(NORTH)
+    else
+        setFacing(SOUTH)
     end
 
     turtle.digUp()
