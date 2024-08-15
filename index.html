@@ -372,6 +372,7 @@ function mainLoop()
 
     if Y%3 ~= 0 then
         turtle.digDown()
+        turtle.suckDown()
         moveDown()
         return
     end
@@ -421,6 +422,11 @@ function mainLoop()
     turtle.dig()
     turtle.suck()
     moveForward()
+
+    if X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y > DEPTH or Y < -1 then
+        print('OUT OF BOUNDS')
+        shell.exit()
+    end
 end
 
 while not FINISHED do
