@@ -255,9 +255,13 @@ end
 function moveTo(toX, toY, toZ)
     while Y ~= toY do
         if Y > toY then
-            moveUp()
+            if not moveUp() then
+                turtle.digUp()
+            end
         else
-            moveDown()
+            if not moveDown() then
+                turtle.digDown()
+            end
         end
     end
 
