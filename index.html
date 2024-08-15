@@ -389,6 +389,11 @@ function digMove()
     untilFailure(turtle.suckUp)
     untilFailure(turtle.suckDown)
     untilFailure(turtle.suck)
+
+    if fullInv() then
+        return
+    end
+    
     turtle.digUp()
     untilFailure(turtle.suckUp)
     turtle.digDown()
