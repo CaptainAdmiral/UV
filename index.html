@@ -65,7 +65,7 @@ function facingFromDiff(dx, dy, dz)
 end
 
 function updatePosFromFacing(facing, amount)
-    if (facing == NORTH) then
+    if facing == NORTH then
         Z = Z + amount
     elseif facing == EAST then
         X = X + amount
@@ -152,6 +152,7 @@ function loadState()
         updatePosFromFacing(ATTEMPTED_MOVE, diff)
         ATTEMPTING_MOVE = false
         ATTEMPTED_MOVE = ''
+        print('corrected state')
         saveState()
     end
 end
@@ -341,7 +342,7 @@ function setFacing(facing)
         return
     end
 
-    if (facing+1)%4 == FACING then
+    if (FACING+1)%4 == facing then
         turnRight()
     else
         turnLeft()
