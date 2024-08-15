@@ -177,7 +177,7 @@ function trackTurnRight()
 end
 
 function trackTurnLeft()
-    local res = turtle.turnRight()
+    local res = turtle.turnLeft()
     if res then
         FACING = (FACING - 1)%4
     end
