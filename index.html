@@ -35,7 +35,7 @@ end
 
 function untilSuccess(f, ...)
     repeat
-        local res = f(table.unpack(args))
+        local res = f(table.unpack(arg))
     until
         res ~= nil and res ~= false
 
@@ -44,7 +44,7 @@ end
 
 function untilFailure(f, ...)
     repeat
-        local res = f(table.unpack(args))
+        local res = f(table.unpack(arg))
     until
         res ~= true
 
