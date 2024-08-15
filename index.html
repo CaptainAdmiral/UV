@@ -407,13 +407,16 @@ while not FINISHED do
     end
 
     if facingBit then
-        setFacing(SOUTH)
-    else
         setFacing(NORTH)
+    else
+        setFacing(SOUTH)
     end
 
     turtle.digUp()
+    turtle.suckUp()
     turtle.digDown()
+    turtle.suckDown()
     turtle.dig()
+    turtle.suck()
     moveForward()
 end
