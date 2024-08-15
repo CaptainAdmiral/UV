@@ -1,5 +1,417 @@
-test
-test
-test
-test
-test
+REFUEL_THRESHOLD = 500
+REFUEL_TO = 800
+MIN_Y = 6
+X_SIZE = 16
+Z_SIZE = 16
+
+NORTH = 0
+EAST = 1
+SOUTH = 2
+WEST = 3
+UP = 4
+DOWN = 5
+
+X = nil
+Y = nil
+Z = nil
+FACING = nil
+FUEL = nil
+ATTEMPTING_MOVE = false
+ATTEMPTING_TURN = false
+ATTEMPTED_MOVE = nil
+
+UNLOADING = false
+RETURNING = false
+RETURN_X = nil
+RETURN_Y = nil
+RETURN_Z = nil
+
+FINISHED = false
+
+if not fs.isDir( '.state') then
+    fs.makeDir( '.state')
+end
+
+function untilSuccess(f, ...)
+    repeat
+        local res = f(table.unpack(args))
+    until
+        res ~= nil and res ~= false
+
+    return res
+end
+
+function inverseFacing(facing)
+    return (facing+2)%4
+end
+
+function facingFromDiff(dx, dy, dz)
+    if dz > 0 then
+        return NORTH
+    elseif dz < 0 then
+        return SOUTH
+    elseif dx > 0 then
+        return EAST
+    elseif dx < 0 then
+        return WEST
+    elseif dy > 0 then
+        return UP
+    elseif dy < 0 then
+        return DOWN
+    end
+
+    return FACING
+end
+
+function updatePosFromFacing(facing, amount)
+    if (facing == NORTH) then
+        Z = Z + amount
+    elseif facing == EAST then
+        X = X + amount
+    elseif facing == SOUTH then
+        Z = Z - amount
+    elseif facing == WEST then
+        X = X - amount
+    elseif facing == UP then
+        Y = Y + amount
+    elseif facing == DOWN then
+        Y = Y - amount
+    end
+end
+
+function saveState()
+    local file = fs.open('.state/state', 'w')
+    file.write(textutils.serialize({
+        X,
+        Y,
+        Z,
+        FACING,
+        FUEL,
+        ATTEMPTING_MOVE,
+        ATTEMPTING_TURN,
+        ATTEMPTED_MOVE,
+        UNLOADING,
+        RETURNING,
+        RETURN_X,
+        RETURN_Y,
+        RETURN_Z,
+        FINISHED,
+    }))
+    file.close()
+    fs.copy('.state/state', '.state/backup')
+end
+
+function loadState()
+    if ATTEMPTING_TURN then
+        shell.exit()
+    end
+
+    local file = nil
+    if fs.exists('.state/state') then
+        file = fs.open('.state/state', 'r')
+    elseif fs.exists('.state/backup') then
+        fs.copy('.state/backup', '.state/state')
+        file = fs.open('.state/backup', 'r')
+    else
+        X = 0
+        Y = 0
+        Z = 0
+        FACING = NORTH
+        FUEL = turtle.getFuelLevel()
+        saveState()
+        return
+    end
+
+    X,
+    Y,
+    Z,
+    FACING,
+    FUEL,
+    ATTEMPTING_MOVE,
+    ATTEMPTING_TURN,
+    ATTEMPTED_MOVE,
+    UNLOADING,
+    RETURNING,
+    RETURN_X,
+    RETURN_Y,
+    RETURN_Z,
+    FINISHED = table.unpack(textutils.unserialize(file.readAll()))
+    file.close()
+
+    if ATTEMPTING_MOVE and turtle.getFuelLevel() ~= FUEL then
+        local diff = FUEL - turtle.getFuelLevel()
+        if diff < 0 then
+            shell.exit()
+        end
+        updatePosFromFacing(ATTEMPTED_MOVE, diff)
+        ATTEMPTING_MOVE = false
+        ATTEMPTED_MOVE = nil
+        saveState()
+    end
+end
+
+function withTurnLock(f)
+    ATTEMPTING_TURN = true
+    saveState()
+    local res = f()
+    ATTEMPTING_TURN = false
+    saveState()
+    return res
+end
+
+function trackTurnRight()
+    local res = turtle.turnRight()
+    if res then
+        FACING = (FACING + 1)%4
+    end
+    return res
+end
+
+function trackTurnLeft()
+    local res = turtle.turnRight()
+    if res then
+        FACING = (FACING - 1)%4
+    end
+    return res
+end
+
+function turnLeft()
+    return withTurnLock(trackTurnLeft)
+end
+
+function turnRight()
+    return withTurnLock(trackTurnRight)
+end
+
+function withMoveLock(f, attemptedMove)
+    ATTEMPTING_MOVE = true
+    ATTEMPTED_MOVE = attemptedMove
+    saveState()
+    local res = f()
+    ATTEMPTING_MOVE = false
+    ATTEMPTED_MOVE = nil
+    saveState()
+    return res
+end
+
+function trackMoveForward()
+    local res = turtle.forward()
+    if res then
+        updatePosFromFacing(FACING, 1)
+    end
+    return res
+end
+
+function trackMoveBack()
+    local res = turtle.back()
+    if res then
+        updatePosFromFacing(inverseFacing(FACING), 1)
+    end
+    return res
+end
+
+function trackMoveUp()
+    local res = turtle.up()
+    if res then
+        updatePosFromFacing(UP, 1)
+    end
+    return res
+end
+
+function trackMoveDown()
+    local res = turtle.down()
+    if res then
+        updatePosFromFacing(DOWN, 1)
+    end
+    return res
+end
+
+function moveForward()
+    return withMoveLock(trackMoveForward, FACING)
+end
+
+function moveBack()
+    return withMoveLock(trackMoveBack, inverseFacing(FACING))
+end
+
+function moveUp()
+    return withMoveLock(trackMoveUp, UP)
+end
+
+function moveDown()
+    return withMoveLock(trackMoveDown, DOWN)
+end
+
+function moveTo(toX, toY, toZ)
+    while Y ~= toY do
+        if Y < toY then
+            moveUp()
+        else
+            moveDown()
+        end
+        return
+    end
+
+    setFacing(facingFromDiff(toX - X, 0, 0))
+
+    while X ~= toX do
+        if not moveForward() then
+            turtle.dig()
+        end
+    end
+
+    setFacing(facingFromDiff(0, 0, toZ - Z))
+
+    while Z ~= toZ do
+        if not moveForward() then
+            turtle.dig()
+        end
+    end
+end
+
+function setReturn()
+    RETURN_X = X
+    RETURN_Y = Y
+    RETURN_Z = Z
+    saveState()
+end
+
+function moveToReturn()
+    moveTo(RETURN_X, RETURN_Y, RETURN_Z)
+    RETURN_X = nil
+    RETURN_Y = nil
+    RETURN_Z = nil
+    RETURNING = false
+    saveState()
+end
+
+function refuel()
+    for i=1, 16 do
+        turtle.select(i)
+        turtle.refuel()
+        FUEL = turtle.getFuelLevel()
+        saveState()
+        if FUEL >= REFUEL_TO then
+            break
+        end
+    end
+    turtle.select(1)
+end
+
+function unload()
+    UNLOADING = true
+    saveState()
+
+    moveTo(0, -1, 0)
+    for i=1, 16 do
+        turtle.select(i)
+        turtle.dropUp()
+    end
+    turtle.select(1)
+
+    UNLOADING = false
+    RETURNING = true
+    saveState()
+    moveToReturn()
+end
+
+function fullInv()
+    for i=1, 16 do
+        if turtle.getItemCount(i) == 0 then
+            return false
+        end
+    end
+    return true
+end
+
+function setFacing(facing)
+    if facing == FACING then
+        return
+    end
+
+    if facing == inverseFacing(FACING) then
+        turnRight()
+        turnRight()
+        return
+    end
+
+    if (FACING+1)%4 == FACING then
+        turnRight()
+    else
+        turnLeft()
+    end
+end
+
+---------------------------------------------------------------------------------------------------------
+
+loadState()
+
+if UNLOADING then
+    unload()
+end
+
+if RETURNING then
+    moveToReturn()
+end
+
+while not FINISHED do
+    if turtle.getFuelLevel() < REFUEL_THRESHOLD then
+        refuel()
+        return
+    end
+
+    if fullInv() and not RETURNING then
+        setReturn()
+        unload()
+        return
+    end
+
+    if Y%3 ~= 0 then
+        turtle.digDown()
+        moveDown()
+        return
+    end
+
+    local facingBit = bit.bxor(Z%2, Y%2)
+    local isMaxX = X == X_SIZE - X_SIZE*facingBit
+    local isMaxZ = Z == Z_SIZE - Z_SIZE*(Y%2)
+
+    if isMaxX and isMaxZ then
+        if Y <= MIN_Y + 1 then
+            FINISHED = true
+            return
+        end
+
+        turtle.digDown()
+        moveDown()
+        return
+    end
+
+    if isMaxZ then
+        if Y%2 then
+            setFacing(EAST)
+        else
+            setFacing(WEST)
+        end
+
+        turtle.digUp()
+        turtle.suckUp()
+        turtle.digDown()
+        turtle.suckDown()
+        turtle.dig()
+        turtle.suck()
+        moveForward()
+        return
+    end
+
+    if facingBit then
+        setFacing(SOUTH)
+    else
+        setFacing(NORTH)
+    end
+
+    turtle.digUp()
+    turtle.digDown()
+    turtle.dig()
+    moveForward()
+end
