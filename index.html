@@ -105,6 +105,7 @@ end
 
 function loadState()
     if ATTEMPTING_TURN then
+        print('ATTEMPTING TURN on load')
         shell.exit()
     end
 
@@ -143,6 +144,7 @@ function loadState()
     if ATTEMPTING_MOVE and turtle.getFuelLevel() ~= FUEL then
         local diff = FUEL - turtle.getFuelLevel()
         if diff < 0 then
+            print('OVERFUEL on load')
             shell.exit()
         end
         updatePosFromFacing(ATTEMPTED_MOVE, diff)
@@ -356,7 +358,7 @@ if RETURNING then
     moveToReturn()
 end
 
-while not FINISHED do
+function mainLoop()
     if turtle.getFuelLevel() < REFUEL_THRESHOLD then
         refuel()
         return
@@ -419,4 +421,8 @@ while not FINISHED do
     turtle.dig()
     turtle.suck()
     moveForward()
+end
+
+while not FINISHED do
+    mainLoop()
 end
