@@ -31,6 +31,8 @@ RETURN_Z = ''
 
 FINISHED = false
 
+REFUEL_CHECK_COUNTER = 0
+
 if not fs.isDir( '.state') then
     fs.makeDir( '.state')
 end
@@ -203,9 +205,23 @@ function turnRight()
     return withTurnLock(trackTurnRight)
 end
 
+function refuel()
+    for i=1, 16 do
+        turtle.select(i)
+        turtle.refuel()
+        FUEL = turtle.getFuelLevel()
+        saveState()
+        if FUEL >= REFUEL_TO then
+            break
+        end
+    end
+    turtle.select(1)
+end
+
 function withMoveLock(f, attemptedMove)
-    if turtle.getFuelLevel() < REFUEL_THRESHOLD then
+    if turtle.getFuelLevel() == 0  then
         refuel()
+        REFUEL_CHECK_COUNTER = 0
     end
     
     ATTEMPTING_MOVE = true
@@ -321,19 +337,6 @@ function moveToReturn()
     saveState()
 end
 
-function refuel()
-    for i=1, 16 do
-        turtle.select(i)
-        turtle.refuel()
-        FUEL = turtle.getFuelLevel()
-        saveState()
-        if FUEL >= REFUEL_TO then
-            break
-        end
-    end
-    turtle.select(1)
-end
-
 function unload()
     UNLOADING = true
     saveState()
@@ -413,6 +416,13 @@ function digMove()
 end
 
 function mainLoop()
+    if turtle.getFuelLevel() < REFUEL_THRESHOLD and REFUEL_CHECK_COUNTER >= 20 then
+        refuel()
+        REFUEL_CHECK_COUNTER = 0
+    else
+        REFUEL_CHECK_COUNTER = REFUEL_CHECK_COUNTER + 1
+    end
+
     if fullInv() and not RETURNING then
         setReturn()
         unload()
