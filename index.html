@@ -420,6 +420,24 @@ function mainLoop()
         return
     end
 
+    local success, tab = turtle.inspectDown()
+    if success and tab.name == 'minecraft:bedrock' then
+        local finished = true
+    end
+
+    local success, tab = turtle.inspect()
+    if success and tab.name == 'minecraft:bedrock' then
+        local finished = true
+    end
+    
+    if finished then
+        setReturn()
+        unload()
+        FINISHED=true
+        saveState()
+        return
+    end
+
     if Y%3 ~= 0 then
         turtle.digDown()
         turtle.suckDown()
@@ -432,11 +450,6 @@ function mainLoop()
     local isMaxX = X == X_SIZE - X_SIZE*(Y%2)
 
     if isMaxX and isMaxZ then
-        if Y >= DEPTH + 1 then
-            FINISHED = true
-            return
-        end
-
         turtle.digDown()
         moveDown()
         return
@@ -466,23 +479,6 @@ function mainLoop()
         FINISHED=true
         saveState()
         return
-    end
-
-    local success, tab = turtle.inspectDown()
-    if success and tab.name == 'minecraft:bedrock' then
-        local finished = true
-    end
-
-    local success, tab = turtle.inspect()
-    if success and tab.name == 'minecraft:bedrock' then
-        local finished = true
-    end
-    
-    if finished then
-        setReturn()
-        unload()
-        FINISHED=true
-        saveState()
     end
 end
 
