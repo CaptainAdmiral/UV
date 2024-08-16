@@ -398,9 +398,9 @@ function checkFinished()
     end
     
     if finished then
+        FINISHED=true
         setReturn()
         unload()
-        FINISHED=true
         saveState()
         return true
     end
