@@ -419,14 +419,15 @@ function mainLoop()
         return
     end
 
+    local finished = false
     local success, tab = turtle.inspectDown()
     if success and tab.name == 'minecraft:bedrock' then
-        local finished = true
+        finished = true
     end
 
     local success, tab = turtle.inspect()
     if success and tab.name == 'minecraft:bedrock' then
-        local finished = true
+        finished = true
     end
     
     if finished then
