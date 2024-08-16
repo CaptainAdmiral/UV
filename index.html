@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------------------------------
 
-REFUEL_THRESHOLD = 800
-REFUEL_TO = 1100
+REFUEL_THRESHOLD = 400
+REFUEL_TO = 800
 X_SIZE = 16
 Z_SIZE = 16
 
@@ -411,7 +411,6 @@ end
 function mainLoop()
     if turtle.getFuelLevel() < REFUEL_THRESHOLD then
         refuel()
-        return
     end
 
     if fullInv() and not RETURNING then
