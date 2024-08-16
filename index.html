@@ -1,9 +1,11 @@
-DEPTH = 70
+---------------------------------------------------------------------------------------------------------
 
-REFUEL_THRESHOLD = 700
-REFUEL_TO = 1000
+REFUEL_THRESHOLD = 800
+REFUEL_TO = 1100
 X_SIZE = 16
 Z_SIZE = 16
+
+---------------------------------------------------------------------------------------------------------
 
 NORTH = 0
 EAST = 1
@@ -466,7 +468,17 @@ function mainLoop()
         return
     end
 
-    if Y > DEPTH then
+    local success, tab = turtle.inspectDown()
+    if success and tab.name == 'minecraft:bedrock' then
+        local finished = true
+    end
+
+    local success, tab = turtle.inspect()
+    if success and tab.name == 'minecraft:bedrock' then
+        local finished = true
+    end
+    
+    if finished then
         setReturn()
         unload()
         FINISHED=true
