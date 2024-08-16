@@ -219,7 +219,7 @@ function refuel()
 end
 
 function withMoveLock(f, attemptedMove)
-    if turtle.getFuelLevel() == 0  then
+    if turtle.getFuelLevel() == 0 then
         refuel()
         REFUEL_CHECK_COUNTER = 0
     end
@@ -397,7 +397,7 @@ function checkFinished()
         finished = true
     end
     
-    if finished then
+    if FINISHED or finished then
         FINISHED=true
         setReturn()
         unload()
