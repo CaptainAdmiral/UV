@@ -204,6 +204,10 @@ function turnRight()
 end
 
 function withMoveLock(f, attemptedMove)
+    if turtle.getFuelLevel() < REFUEL_THRESHOLD then
+        refuel()
+    end
+    
     ATTEMPTING_MOVE = true
     ATTEMPTED_MOVE = attemptedMove
     saveState()
@@ -409,10 +413,6 @@ function digMove()
 end
 
 function mainLoop()
-    if turtle.getFuelLevel() < REFUEL_THRESHOLD then
-        refuel()
-    end
-
     if fullInv() and not RETURNING then
         setReturn()
         unload()
