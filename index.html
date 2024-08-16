@@ -412,14 +412,14 @@ end
 
 loadState()
 
-checkFinished()
-
-if UNLOADING then
-    unload()
-end
-
-if RETURNING then
-    moveToReturn()
+if not checkFinished() then
+    if UNLOADING then
+        unload()
+    end
+    
+    if RETURNING then
+        moveToReturn()
+    end
 end
 
 function digMove()
