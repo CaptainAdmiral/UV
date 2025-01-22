@@ -1,510 +1,87 @@
----------------------------------------------------------------------------------------------------------
-
-REFUEL_THRESHOLD = 4000
-REFUEL_TO = 4500
-X_BLOCKS = 16 --Blocks to mine forwards
-Z_BLOCKS = 16 --Blocks to mine right
-
----------------------------------------------------------------------------------------------------------
-
-X_SIZE = X_BLOCKS - 1
-Z_SIZE = Z_BLOCKS - 1
-
-NORTH = 0
-EAST = 1
-SOUTH = 2
-WEST = 3
-UP = 4
-DOWN = 5
-
-X = ''
-Y = ''
-Z = ''
-FACING = ''
-FUEL = ''
-ATTEMPTING_MOVE = false
-ATTEMPTING_TURN = false
-ATTEMPTED_MOVE = ''
-
-UNLOADING = false
-RETURNING = false
-RETURN_X = ''
-RETURN_Y = ''
-RETURN_Z = ''
-
-FINISHED = false
-
-REFUEL_CHECK_COUNTER = 0
-
-if not fs.isDir( '.state') then
-    fs.makeDir( '.state')
-end
-
-function untilSuccess(f, ...)
-    repeat
-        local res = f(table.unpack(arg))
-    until
-        res ~= nil and res ~= false
-
-    return res
-end
-
-function untilFailure(f, ...)
-    repeat
-        local res = f(table.unpack(arg))
-    until
-        res ~= true
-
-    return res
-end
-
-function inverseFacing(facing)
-    return (facing+2)%4
-end
-
-function facingFromDiff(dx, dy, dz)
-    if dz > 0 then
-        return NORTH
-    elseif dz < 0 then
-        return SOUTH
-    elseif dx > 0 then
-        return EAST
-    elseif dx < 0 then
-        return WEST
-    elseif dy > 0 then
-        return DOWN
-    elseif dy < 0 then
-        return UP
-    end
-
-    return FACING
-end
-
-function updatePosFromFacing(facing, amount)
-    if facing == NORTH then
-        Z = Z + amount
-    elseif facing == EAST then
-        X = X + amount
-    elseif facing == SOUTH then
-        Z = Z - amount
-    elseif facing == WEST then
-        X = X - amount
-    elseif facing == UP then
-        Y = Y - amount
-    elseif facing == DOWN then
-        Y = Y + amount
-    end
-end
-
-function saveState()
-    local file = fs.open('.state/state', 'w')
-    file.write(textutils.serialize({
-        X,
-        Y,
-        Z,
-        FACING,
-        FUEL,
-        ATTEMPTING_MOVE,
-        ATTEMPTING_TURN,
-        ATTEMPTED_MOVE,
-        UNLOADING,
-        RETURNING,
-        RETURN_X,
-        RETURN_Y,
-        RETURN_Z,
-        FINISHED,
-    }))
-    file.close()
-    fs.delete('.state/backup')
-    fs.copy('.state/state', '.state/backup')
-end
-
-function loadState()
-    if ATTEMPTING_TURN then
-        print('ATTEMPTING TURN on load')
-        FINISHED=true
-        saveState()
-    end
-
-    local file = nil
-    if fs.exists('.state/state') then
-        file = fs.open('.state/state', 'r')
-    elseif fs.exists('.state/backup') then
-        fs.copy('.state/backup', '.state/state')
-        file = fs.open('.state/backup', 'r')
-    else
-        X = 0
-        Y = 0
-        Z = 0
-        FACING = NORTH
-        FUEL = turtle.getFuelLevel()
-        saveState()
-        return
-    end
-
-    X,
-    Y,
-    Z,
-    FACING,
-    FUEL,
-    ATTEMPTING_MOVE,
-    ATTEMPTING_TURN,
-    ATTEMPTED_MOVE,
-    UNLOADING,
-    RETURNING,
-    RETURN_X,
-    RETURN_Y,
-    RETURN_Z,
-    FINISHED = table.unpack(textutils.unserialize(file.readAll()))
-    file.close()
-
-    if ATTEMPTING_MOVE and turtle.getFuelLevel() ~= FUEL then
-        local fuel = turtle.getFuelLevel()
-        local diff = FUEL - fuel
-        if diff < 0 then
-            print('OVERFUEL on load')
-            FINISHED=true
-            saveState()
-        end
-        updatePosFromFacing(ATTEMPTED_MOVE, diff)
-        ATTEMPTING_MOVE = false
-        ATTEMPTED_MOVE = ''
-        FUEL = fuel
-        print('corrected state')
-        saveState()
-    end
-end
-
-function withTurnLock(f)
-    ATTEMPTING_TURN = true
-    saveState()
-    local res = f()
-    ATTEMPTING_TURN = false
-    saveState()
-    return res
-end
-
-function trackTurnRight()
-    local res = turtle.turnRight()
-    if res then
-        FACING = (FACING + 1)%4
-    end
-    return res
-end
-
-function trackTurnLeft()
-    local res = turtle.turnLeft()
-    if res then
-        FACING = (FACING - 1)%4
-    end
-    return res
-end
-
-function turnLeft()
-    return withTurnLock(trackTurnLeft)
-end
-
-function turnRight()
-    return withTurnLock(trackTurnRight)
-end
-
-function refuel()
-    for i=1, 16 do
-        turtle.select(i)
-        turtle.refuel()
-        FUEL = turtle.getFuelLevel()
-        saveState()
-        if FUEL >= REFUEL_TO then
-            break
-        end
-    end
-    turtle.select(1)
-end
-
-function withMoveLock(f, attemptedMove)
-    if turtle.getFuelLevel() == 0 then
-        refuel()
-        REFUEL_CHECK_COUNTER = 0
-    end
-    
-    ATTEMPTING_MOVE = true
-    ATTEMPTED_MOVE = attemptedMove
-    saveState()
-    local res = f()
-    ATTEMPTING_MOVE = false
-    ATTEMPTED_MOVE = ''
-    FUEL = turtle.getFuelLevel()
-    saveState()
-    return res
-end
-
-function trackMoveForward()
-    local res = turtle.forward()
-    if res then
-        updatePosFromFacing(FACING, 1)
-    end
-    return res
-end
-
-function trackMoveBack()
-    local res = turtle.back()
-    if res then
-        updatePosFromFacing(inverseFacing(FACING), 1)
-    end
-    return res
-end
-
-function trackMoveUp()
-    local res = turtle.up()
-    if res then
-        updatePosFromFacing(UP, 1)
-    end
-    return res
-end
-
-function trackMoveDown()
-    local res = turtle.down()
-    if res then
-        updatePosFromFacing(DOWN, 1)
-    end
-    return res
-end
-
-function moveForward()
-    return withMoveLock(trackMoveForward, FACING)
-end
-
-function moveBack()
-    return withMoveLock(trackMoveBack, inverseFacing(FACING))
-end
-
-function moveUp()
-    return withMoveLock(trackMoveUp, UP)
-end
-
-function moveDown()
-    return withMoveLock(trackMoveDown, DOWN)
-end
-
-function moveToY(toY)
-    while Y ~= toY do
-        if Y > toY then
-            if not moveUp() then
-                turtle.digUp()
-            end
-        else
-            if not moveDown() then
-                turtle.digDown()
-            end
-        end
-    end
-end
-
-function moveToXZ(toX, toZ)
-    setFacing(facingFromDiff(toX - X, 0, 0))
-
-    while X ~= toX do
-        if not moveForward() then
-            turtle.dig()
-        end
-    end
-
-    setFacing(facingFromDiff(0, 0, toZ - Z))
-
-    while Z ~= toZ do
-        if not moveForward() then
-            turtle.dig()
-        end
-    end
-end
-
-function moveTo(toX, toY, toZ)
-    moveToY(toY)
-    moveToXZ(toX, toZ)
-end
-
-function setReturn()
-    RETURN_X = X
-    RETURN_Y = Y
-    RETURN_Z = Z
-    saveState()
-end
-
-function moveToReturn()
-    moveToXZ(RETURN_X, RETURN_Z)
-    moveToY(RETURN_Y)
-    RETURN_X = ''
-    RETURN_Y = ''
-    RETURN_Z = ''
-    RETURNING = false
-    saveState()
-end
-
-function unload()
-    UNLOADING = true
-    saveState()
-
-    moveToY(-1)
-    moveToXZ(0, 0)
-    for i=1, 16 do
-        turtle.select(i)
-        turtle.dropUp()
-    end
-    turtle.select(1)
-
-    UNLOADING = false
-    RETURNING = true
-    saveState()
-
-    if not FINISHED then
-        moveToReturn()
-    end
-end
-
-function fullInv()
-    for i=1, 16 do
-        if turtle.getItemCount(i) == 0 then
-            return false
-        end
-    end
-    return true
-end
-
-function setFacing(facing)
-    if facing == FACING then
-        return
-    end
-
-    if facing == inverseFacing(FACING) then
-        turnRight()
-        turnRight()
-        return
-    end
-
-    if (FACING+1)%4 == facing then
-        turnRight()
-    else
-        turnLeft()
-    end
-end
-
-function checkFinished()
-    local finished = false
-    local success, tab = turtle.inspectDown()
-    if success and tab.name == 'minecraft:bedrock' then
-        finished = true
-    end
-
-    local success, tab = turtle.inspect()
-    if success and tab.name == 'minecraft:bedrock' then
-        finished = true
-    end
-    
-    if FINISHED or finished then
-        FINISHED=true
-        setReturn()
-        unload()
-        saveState()
-        return true
-    end
-
-    return false
-end
-
----------------------------------------------------------------------------------------------------------
-
-loadState()
-
-if not checkFinished() then
-    if UNLOADING then
-        unload()
-    end
-    
-    if RETURNING then
-        moveToReturn()
-    end
-end
-
-function digMove()
-    untilFailure(turtle.suckUp)
-    untilFailure(turtle.suckDown)
-    untilFailure(turtle.suck)
-
-    if fullInv() then
-        return
-    end
-    
-    turtle.digUp()
-    untilFailure(turtle.suckUp)
-    turtle.digDown()
-    untilFailure(turtle.suckDown)
-    turtle.dig()
-    untilFailure(turtle.suck)
-    moveForward()
-end
-
-function mainLoop()
-    if turtle.getFuelLevel() < REFUEL_THRESHOLD and REFUEL_CHECK_COUNTER >= 20 then
-        refuel()
-        REFUEL_CHECK_COUNTER = 0
-    else
-        REFUEL_CHECK_COUNTER = REFUEL_CHECK_COUNTER + 1
-    end
-
-    if fullInv() and not RETURNING then
-        setReturn()
-        unload()
-        return
-    end
-
-    if checkFinished() then
-        return
-    end
-
-    if Y%3 ~= 0 then
-        turtle.digDown()
-        turtle.suckDown()
-        moveDown()
-        return
-    end
-
-    local facingBit = bit.bxor(X%2, Y%2)
-    local isMaxZ = Z == Z_SIZE - Z_SIZE*facingBit
-    local isMaxX = X == X_SIZE - X_SIZE*(Y%2)
-
-    if isMaxX and isMaxZ then
-        turtle.digDown()
-        moveDown()
-        return
-    end
-
-    if isMaxZ then
-        if Y%2 == 0 then
-            setFacing(EAST)
-        else
-            setFacing(WEST)
-        end
-
-        digMove()
-        return
-    end
-
-    if facingBit == 0 then
-        setFacing(NORTH)
-    else
-        setFacing(SOUTH)
-    end
-
-    digMove()
-
-    if (X < 0 or X > X_SIZE or Z < 0 or Z > Z_SIZE or Y < -1) then
-        print('OUT OF BOUNDS')
-        FINISHED=true
-        saveState()
-        return
-    end
-end
-
-while not FINISHED do
-    mainLoop()
-end
+<span style="display:none">https://www.youtube.com/watch?v=.̵̛͍̟̪̝̹̮̦̹͔̜̹̅̏̄̽̋͑̈'̸̺̲͙̭̒͊̇̚͠!̷̡̡̳̖͇̤̖̪̫̜̤͙͔͓̗̫̩͙̂̊̏͛̍̌̅̊͌̚i̶̩̣̪̫̙͑̔̏̀̾̾̍̃̑͆̕'̴͓̱̇̇̈͌̇̄́̽ͅ'̷̰͇̰̩̝̝͎̫̠̄̊̏̏̀͆̅̉̋̚͝*̷̭̼̣͍̇̈́̈́̓͛͂͝,̸̡̹̮͎̻͖͈͇̒̒̈́́͂̃̒̀̉̒̓͗̚̕͘,̶̞̼̠̓̃̅͆̾̅̃̈́̎͂͆̇͗̓̚͘̚͝;̶̧̞̤̙͙̠̩͓̣̪̬͗̌́̋̒̀̽̅̔;̶̨̨̱͖͖̬̰͓̩̻͛͘͜~̷͍̱̣͔̺̣͔̯͙̜̺̜̐͊̍͑̅̒͂̑̃̀̈́̕'̴̧̧͚̬͎̥̰̮̳̼̞͚͍̤̘̺͔̾̐̿͊̉͗̇̽́̄͛̒̀̉̒̀̾͜͝͝ͅ`̴̢̧̫̙̘̼̞̃͛̓̋̀̏̓̈́̏̑̂͆̓͗̐̚ͅ>̶̨̯͎͎̻̙̱̮̐͂̓̈̀͝<̷̡̢̝̩͕͕̀́͊̔̿͌͋̏͘͠</span>
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+ 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+<p style="text-align: center">ǘ̷͖͕̣͓̰̰̈̌͋͊̅̇l̷̙̤̺̥̈t̶̢̗͙̪̼̬̿̈̾̈́͋̑̀r̶͈̮͒a̶͈͍̻̙̭̞͚̋u̷l̵t̵r̶a̷v̵u̸̡̧̼̻̬͓͈̦̺͋̍́̊̊́̏̌̂͂̽̊͑͐̏͆̔̏̍l̷̟̜̱̮̯͖͍̗̟͉̹͉̪͙̫͈͈̀̀̎t̷̰̲̤̥̞̼̭̘̄̈́̃͒̏͗̔͝͠r̶̛̹̼̺̳̦͍̊̄̍̏͛̇͌͆̒͐̿̍́̓͘̚ã̷̢̡̪͈̝͇̤͉͓͇̩̘́͐̌́̄͋̿͆̇̎͆͒̌̀͑̕͘͝ͅͅv̴̧̧͚̟̝̙̫͎̥̯̻͎̖̟̦̲̺̦̆̀̃́͒̀͐̂͒́̚͘͜į̷̪̯̱͈͉̟̬̳̣͇̗̜̠̫̙̦͕̅́̽̾̀̊̈́͛̆̒͛͊̀̋̕͝ö̶̡̢̮͚͉̗̳̖͔̼́̓͑͗͜l̶̨̧̡̳̗͓̭͓̲͎͈͍̜͇͍̭͂̽̅͌̓̋̀̽̾̿̏́̅̏͝e̴̢̨̧̢̘̖̙͓̮̜͍̠̦̪̜̞̪͌̓̚t̴̡̛̯͔̙̪̲̙̟̗̰̹̝͚͛̑̉́̎̈́̊͆̑̅̑̿̔͑̕̕l̵t̵r̶<br>a̷v̵i̶o̷l̵e̶t̴t̴e̸͙͓͋t̷̼̖̝̻̾͒̇͑</p>
+<br>
+<p style="color: white; white-space: nowrap;">
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+Bouwmeester · Ekert · Zeilinger (Eds.)▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+███ ███████ ██ ███████ ███████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+Leading experts from ███ ███████ ██ ███████ ███████████ network, a European<br>Commission initiative, bring together the most recent results from the emerging area of quantum▓▓<br>technology.
+Written in a consistent style, the ████ introduces quantum cryptography, quantum▓▓<br>teleportation, and quantum computation, considering both theory and the latest experiments.▓▓▓▓<br>
+Thus scientists working in the field and advanced ████████ will find it to be a rich source of▓<br> information on this exciting new area.▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓68▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>
+</p>
